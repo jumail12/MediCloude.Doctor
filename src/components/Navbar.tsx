@@ -19,14 +19,29 @@ import CloseIcon from "@mui/icons-material/Close";
 import NotificationsIcon from "@mui/icons-material/Notifications";
 import { useState } from "react";
 import icon from "../assets/Images/ICON.png";
-import profile from "../assets/Images/profile.webp";
+import defaultProfile from "../assets/Images/profile.webp"; // Default profile image
+import { useQuery } from "@tanstack/react-query";
+import { businessAxios } from "../api/axiosInstance";
 
 const Navbar = () => {
   const name = localStorage.getItem("name");
-  const navigate = useNavigate(); // For navigation
+  const token = localStorage.getItem("token");
+  const id = localStorage.getItem("id");
+  const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const handleDrawerToggle = () => setMobileOpen(!mobileOpen);
+
+  // Fetch doctor profile only if token & id exist
+  const { data: doctor } = useQuery({
+    queryKey: ["dr"],
+    queryFn: async () => {
+      if (!token || !id) return null; // Stop query if no token or id
+      const res = await businessAxios.get(`/DoctorView/id?Id=${id}`);
+      return res.data.data;
+    },
+    enabled: !!token && !!id, // Run query only if token & id exist
+  });
 
   return (
     <Box
@@ -83,7 +98,7 @@ const Navbar = () => {
           }}
         >
           <NavLinks />
-          <AuthSection name={name} navigate={navigate} />
+          <AuthSection name={name} navigate={navigate} doctor={doctor} />
         </Box>
 
         {/* Mobile Menu Button */}
@@ -118,7 +133,7 @@ const Navbar = () => {
                   </ListItemButton>
                 </ListItem>
               ))}
-              <ListItem>{AuthSection({ name, navigate })}</ListItem>
+              <ListItem>{AuthSection({ name, navigate, doctor })}</ListItem>
             </List>
           </Box>
         </Drawer>
@@ -141,7 +156,7 @@ const NavLinks = () => (
 );
 
 /** Authentication Section (Profile/Sign Up) */
-const AuthSection = ({ name, navigate }: any) =>
+const AuthSection = ({ name, navigate, doctor }: any) =>
   name ? (
     <Box display="flex" alignItems="center" gap={2}>
       <Tooltip title="Notifications" arrow>
@@ -167,7 +182,8 @@ const AuthSection = ({ name, navigate }: any) =>
           }}
           onClick={() => navigate("/profile")}
         >
-          <Avatar src={profile} sx={{ bgcolor: "#ffffff" }} />
+          {/* Use doctor profile image if available, else default */}
+          <Avatar src={doctor?.profile || defaultProfile} sx={{ bgcolor: "#ffffff" }} />
           <Typography sx={{ color: "#000", fontWeight: "bold" }}>
             {name}
           </Typography>
