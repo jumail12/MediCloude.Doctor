@@ -43,6 +43,16 @@ const Navbar = () => {
     enabled: !!token && !!id, // Run query only if token & id exist
   });
 
+  const { data: unreadCount } = useQuery({
+    queryKey: ["notfi-count"],
+    queryFn: async () => {
+      const res = await businessAxios.get(
+        `/Notification/notifications/length?recipient_type=Doctor`
+      );
+      return res?.data?.data ?? 0;
+    },
+  });
+
   return (
     <Box
       sx={{
@@ -98,7 +108,12 @@ const Navbar = () => {
           }}
         >
           <NavLinks />
-          <AuthSection name={name} navigate={navigate} doctor={doctor} />
+          <AuthSection
+            name={name}
+            navigate={navigate}
+            doctor={doctor}
+            unreadCount={unreadCount}
+          />
         </Box>
 
         {/* Mobile Menu Button */}
@@ -133,7 +148,9 @@ const Navbar = () => {
                   </ListItemButton>
                 </ListItem>
               ))}
-              <ListItem>{AuthSection({ name, navigate, doctor })}</ListItem>
+              <ListItem>
+                {AuthSection({ name, navigate, doctor, unreadCount })}
+              </ListItem>
             </List>
           </Box>
         </Drawer>
@@ -156,7 +173,7 @@ const NavLinks = () => (
 );
 
 /** Authentication Section (Profile/Sign Up) */
-const AuthSection = ({ name, navigate, doctor }: any) =>
+const AuthSection = ({ name, navigate, doctor, unreadCount }: any) =>
   name ? (
     <Box display="flex" alignItems="center" gap={2}>
       <Tooltip title="Notifications" arrow>
@@ -165,7 +182,7 @@ const AuthSection = ({ name, navigate, doctor }: any) =>
           to="/notification"
           sx={{ textDecoration: "none" }}
         >
-          <Badge badgeContent={2} color="error">
+          <Badge badgeContent={unreadCount} color="error">
             <NotificationsIcon sx={iconStyles} />
           </Badge>
         </Link>
@@ -183,7 +200,10 @@ const AuthSection = ({ name, navigate, doctor }: any) =>
           onClick={() => navigate("/profile")}
         >
           {/* Use doctor profile image if available, else default */}
-          <Avatar src={doctor?.profile || defaultProfile} sx={{ bgcolor: "#ffffff" }} />
+          <Avatar
+            src={doctor?.profile || defaultProfile}
+            sx={{ bgcolor: "#ffffff" }}
+          />
           <Typography sx={{ color: "#000", fontWeight: "bold" }}>
             {name}
           </Typography>

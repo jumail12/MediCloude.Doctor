@@ -14,9 +14,11 @@ import {
   DialogContent,
   DialogTitle,
   Stack,
+  Select,
+  MenuItem,
 } from "@mui/material";
 import LogoutOutlinedIcon from "@mui/icons-material/LogoutOutlined"; // MUI Logout Icon
-import {useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { businessAxios } from "../api/axiosInstance";
 import { useNavigate } from "react-router-dom"; // For redirection
 import profile_bg from "../assets/Images/profile.webp"; // Default profile image
@@ -26,6 +28,7 @@ import AddSlotModal from "../components/modals/AddSlotModal ";
 const DrProfileContainer = () => {
   const navigate = useNavigate();
   const id = localStorage.getItem("id");
+  const [days, setDays] = useState(7);
 
   const { data: doctor, isLoading } = useQuery({
     queryKey: ["dr"],
@@ -36,30 +39,49 @@ const DrProfileContainer = () => {
   });
 
   const { data: availableSlots, isLoading: slotLoading } = useQuery({
-    queryKey: ["slots"],
+    queryKey: ["slots", days],
     queryFn: async () => {
       const res = await businessAxios.get(
-        `/DrAvailability/available-slots?drid=${id}`
+        `/DrAvailability/dr-profile-slots?days=${days}`
       );
       return res.data.data;
     },
   });
 
-
   const [open, setOpen] = useState(false);
   const handleClose = () => setOpen(false);
 
-  const [slotopen,SetSlotAddOpen]=useState(false);
-  const handleCloseAddSlot =()=> SetSlotAddOpen(false);
+  const [slotopen, SetSlotAddOpen] = useState(false);
+  const handleCloseAddSlot = () => SetSlotAddOpen(false);
 
   const [openLogout, setOpenLogout] = useState(false);
   const handleCloseLogout = () => setOpenLogout(false);
 
-  const mockAppointments = [
-    { date: "2025-04-10", time: "10:00 AM", patient: "John Doe" },
-    { date: "2025-04-11", time: "11:30 AM", patient: "Jane Smith" },
-    { date: "2025-04-12", time: "2:00 PM", patient: "Alice Brown" },
-  ];
+  const { data: upcomingAppointments, isLoading: appoLoading } = useQuery({
+    queryKey: ["upcoming-appo"],
+    queryFn: async () => {
+      const res = await businessAxios.get(
+        `/DrUpcomingAppoinments/dr-upcoming-appoiments?pageNumber=1&pageSize=3`
+      );
+      return res.data.data;
+    },
+  });
+
+  const formatTime = (timeString: string) => {
+    const [hours, minutes] = timeString.split(":").map(Number); // Extract HH and MM
+    const date = new Date();
+    date.setHours(hours, minutes); // Set extracted time into a date object
+
+    return date.toLocaleString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true, // Converts to AM/PM format
+    });
+  };
+
+  const handleShowMore = () => {
+    navigate("/appointments");
+  };
 
   const handleLogout = () => {
     localStorage.clear();
@@ -129,38 +151,83 @@ const DrProfileContainer = () => {
             <Typography variant="body2" mt={1}>
               {doctor?.qualification || "Not provided"}
             </Typography>
+            <Typography variant="body2" mt={1} sx={{ color: "#3CBDED" }}>
+              Fees: ₹ {doctor?.drfee ?? "Not provided"}
+            </Typography>
           </Grid>
 
-          {/* Appointment Section */}
           <Grid item xs={12} md={8}>
-            <Typography variant="h6" fontWeight={600}>
+            <Typography variant="h6" fontWeight={600} sx={{ mb: 2 }}>
               Upcoming Appointments
             </Typography>
-            <Box
-              sx={{ mt: 2, display: "flex", flexDirection: "column", gap: 2 }}
-            >
-              {mockAppointments.length === 0 ? (
-                <Typography>No upcoming appointments</Typography>
-              ) : (
-                mockAppointments.map((appointment, index) => (
-                  <Paper
-                    key={index}
-                    sx={{
-                      p: 2,
-                      borderRadius: 2,
-                      boxShadow: "0px 2px 8px rgba(0, 0, 0, 0.2)",
-                    }}
-                  >
-                    <Typography variant="body1" fontWeight={600}>
-                      {appointment.patient}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      {appointment.date} at {appointment.time}
-                    </Typography>
-                  </Paper>
-                ))
-              )}
-            </Box>
+
+            {appoLoading ? (
+              <Box sx={{ display: "flex", justifyContent: "center", mt: 2 }}>
+                <CircularProgress />
+              </Box>
+            ) : (
+              <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                {Array.isArray(upcomingAppointments.items) &&
+                upcomingAppointments.items.length > 0 ? (
+                  <>
+                    {upcomingAppointments.items.map((appointment: any) => (
+                      <Paper
+                      onClick={() => navigate(`/appointments/${appointment.id}`)} 
+                        key={appointment.id}
+                        sx={{
+                          p: 2,
+                          borderRadius: 3,
+                          boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.15)",
+                          transition: "all 0.3s ease-in-out",
+                          "&:hover": {
+                            boxShadow: "0px 6px 16px rgba(0, 0, 0, 0.25)",
+                            cursor:"pointer"
+                          },
+                        }}
+                      >
+                        <Typography variant="body1" fontWeight={600}>
+                          {appointment.patient_name}
+                        </Typography>
+
+                        <Typography variant="body2" color="text.secondary">
+                          {new Date(appointment.appointmentDate).toLocaleString(
+                            "en-US",
+                            {
+                              weekday: "long",
+                              month: "long",
+                              day: "2-digit",
+                            }
+                          )}{" "}
+                          at {formatTime(appointment.appointmentTime)}
+                        </Typography>
+                      </Paper>
+                    ))}
+
+                    {upcomingAppointments.items.length > 0 && (
+                      <Button
+                        variant="outlined"
+                        sx={{
+                          alignSelf: "center",
+                          mt: 2,
+                          borderRadius: 2,
+                          borderColor: "#1976d2",
+                          color: "#1976d2",
+                          "&:hover": {
+                            backgroundColor: "#1976d2",
+                            color: "#fff",
+                          },
+                        }}
+                        onClick={handleShowMore}
+                      >
+                        Show More
+                      </Button>
+                    )}
+                  </>
+                ) : (
+                  <Typography>No upcoming appointments</Typography>
+                )}
+              </Box>
+            )}
           </Grid>
         </Grid>
 
@@ -225,85 +292,108 @@ const DrProfileContainer = () => {
             {doctor?.about || "No information provided."}
           </Typography>
         </Box>
-
-{/* avaalbe slots */}
-   
-<Stack
-        direction="row"
-        justifyContent="space-between"
-        alignItems="center"
-        sx={{ my: 3 }}
-      >
-        <Typography variant="h6" fontWeight={600}>
-          Available Slots
-        </Typography>
-        <Button
-          variant="contained"
-          sx={{
-            backgroundColor: "#000",
-            color: "#fff",
-            ":hover": { backgroundColor: "#333" },
-          }}
-          onClick={() => SetSlotAddOpen(true)}
+        {/* Available Slots Section */}
+        <Stack
+          direction="row"
+          justifyContent="space-between"
+          alignItems="center"
+          sx={{ my: 3 }}
         >
-          Add Slot
-        </Button>
-      </Stack>
+          <Typography variant="h6" fontWeight={600}>
+            Available Slots
+          </Typography>
 
-      {/* Available Slots Section */}
-      <Box
-        sx={{
-          mt: 2,
-          p: 2,
-          bgcolor: "#f9f9f9",
-          borderRadius: 2,
-          minHeight: "150px",
-        }}
-      >
-        {slotLoading ? (
-          <Typography>Loading available slots...</Typography>
-        ) : availableSlots && availableSlots.length > 0 ? (
-          availableSlots.map((slot: any, index: number) => (
-            <Box key={index} sx={{ mb: 3 }}>
-              {/* Day Header */}
-              <Typography variant="h6" fontWeight={600} sx={{ mb: 1 }}>
-                {slot.appointmentDay}
-              </Typography>
+          {/* ✅ Dropdown for Selecting Days */}
+          <Select
+            value={days}
+            onChange={(e) => setDays(Number(e.target.value))} // ✅ Ensure `days` is a number
+            sx={{
+              minWidth: 120,
+              bgcolor: "white",
+              boxShadow: "0px 2px 4px rgba(0,0,0,0.2)",
+              borderRadius: 2,
+            }}
+          >
+            <MenuItem value={0}>All</MenuItem>
+            <MenuItem value={1}>1 Day</MenuItem>
+            <MenuItem value={3}>3 Days</MenuItem>
+            <MenuItem value={7}>7 Days</MenuItem>
+            <MenuItem value={14}>14 Days</MenuItem>
+            <MenuItem value={30}>30 Days</MenuItem>
+          </Select>
 
-              {/* Time Slots Grid */}
-              <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
-                {slot.appoinmentTimes.map((timeSlot: any) => (
-                  <Paper
-                    key={timeSlot.id}
-                    sx={{
-                      p: 1.5,
-                      borderRadius: 2,
-                      boxShadow: "0px 2px 8px rgba(0, 0, 0, 0.2)",
-                      backgroundColor: timeSlot.isAvailable
-                        ? "#ffffff"
-                        : "#d3d3d3",
-                      cursor: timeSlot.isAvailable ? "pointer" : "not-allowed",
-                      minWidth: "100px",
-                      textAlign: "center",
-                    }}
-                  >
-                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                      {timeSlot.appointmentTime}
-                    </Typography>
-                    {!timeSlot.isAvailable && (
-                      <Typography variant="caption" color="error">
-                        Booked
-                      </Typography>
-                    )}
-                  </Paper>
-                ))}
-              </Box>
+          {/* ✅ Add Slot Button */}
+          <Button
+            variant="contained"
+            sx={{
+              backgroundColor: "#000",
+              color: "#fff",
+              ":hover": { backgroundColor: "#333" },
+            }}
+            onClick={() => SetSlotAddOpen(true)} // ✅ Opens slot addition dialog/modal
+          >
+            Add Slot
+          </Button>
+        </Stack>
+
+        {/* Available Slots List */}
+        <Box
+          sx={{
+            mt: 2,
+            p: 2,
+            bgcolor: "#f9f9f9",
+            borderRadius: 2,
+            minHeight: "150px",
+          }}
+        >
+          {slotLoading ? (
+            <Box display="flex" justifyContent="center">
+              <CircularProgress size={30} />
             </Box>
-          ))
-        ) : (
-          <Typography>No available slots.</Typography>
-        )}
-      </Box>
+          ) : availableSlots && availableSlots.length > 0 ? (
+            availableSlots.map((slot: any, index: number) => (
+              <Box key={index} sx={{ mb: 3 }}>
+                {/* Appointment Date Header */}
+                <Typography variant="h6" fontWeight={600} sx={{ mb: 1 }}>
+                  {new Date(slot.appointmentDate).toDateString()}
+                </Typography>
+
+                {/* Time Slots Grid */}
+                <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
+                  {slot.appointmentTimes.map((timeSlot: any) => (
+                    <Paper
+                      key={timeSlot.id}
+                      sx={{
+                        p: 1.5,
+                        borderRadius: 2,
+                        boxShadow: "0px 2px 8px rgba(0, 0, 0, 0.2)",
+                        backgroundColor: timeSlot.isAvailable
+                          ? "#ffffff"
+                          : "#d3d3d3",
+                        cursor: timeSlot.isAvailable
+                          ? "pointer"
+                          : "not-allowed",
+                        minWidth: "100px",
+                        textAlign: "center",
+                      }}
+                    >
+                      <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                        {timeSlot.appointmentTime}
+                      </Typography>
+                      {!timeSlot.isAvailable && (
+                        <Typography variant="caption" color="error">
+                          Booked
+                        </Typography>
+                      )}
+                    </Paper>
+                  ))}
+                </Box>
+              </Box>
+            ))
+          ) : (
+            <Typography>No available slots.</Typography>
+          )}
+        </Box>
       </Paper>
 
       {/* Profile Update Modal */}
@@ -314,10 +404,9 @@ const DrProfileContainer = () => {
       />
 
       {/* for slot add modal */}
-      <AddSlotModal 
-      slotopen={slotopen} 
-      handleCloseAddSlot={handleCloseAddSlot}
-
+      <AddSlotModal
+        slotopen={slotopen}
+        handleCloseAddSlot={handleCloseAddSlot}
       />
 
       {/* Logout Confirmation Modal */}

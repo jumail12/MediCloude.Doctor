@@ -12,20 +12,29 @@ import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import DrProfile from "./pages/DrProfile";
 import NotFoundPage from "./components/NotFoundPage";
+import NotificationReceiver from "./components/NotificationReceiver";
+import Notification from "./pages/Notification";
+import Appointments from "./pages/Appointments";
+import AppoinmentById from "./pages/AppoinmentById";
+import VideoCall from "./pages/VideoCall";
 
 function App() {
   const location = useLocation();
-  const hideNavFot = location.pathname.startsWith("/auth"); 
+  const hideNavFot = location.pathname.startsWith("/auth");
   return (
     <Box>
       <Toaster position="top-right" richColors />
-      {!hideNavFot && <Navbar/>}
+      {!hideNavFot && <Navbar />}
+      <NotificationReceiver />
 
       <Routes>
-        <Route path="/profile" element={<DrProfile/>}/>
+        <Route path="/profile" element={<DrProfile />} />
         <Route path="/" element={<Home />} />
-        <Route  path="*" element={<NotFoundPage/>}/>
-
+        <Route path="/notification" element={<Notification />} />
+        <Route path="/appointments" element={<Appointments />}/>
+        <Route path="/appointments/:apid" element={<AppoinmentById/>}/>
+        <Route path="/video-call/:vId" element={<VideoCall/>} /> 
+        <Route path="*" element={<NotFoundPage />} />
 
         <Route path="/auth">
           <Route path="register" element={<Register />} />
@@ -36,7 +45,7 @@ function App() {
           <Route path="verifylicense" element={<VerifyLicense />} />
         </Route>
       </Routes>
-      {!hideNavFot && <Footer/>}
+      {!hideNavFot && <Footer />}
     </Box>
   );
 }

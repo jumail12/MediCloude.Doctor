@@ -7,21 +7,19 @@ import {
   DialogContent,
   DialogActions,
   Button,
-  MenuItem,
-  Select,
   TextField,
-  FormHelperText,
-  FormControl,
-  InputLabel,
   Box,
 } from "@mui/material";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { businessAxios } from "../../api/axiosInstance";
+import { LocalizationProvider, DatePicker } from "@mui/x-date-pickers";
+import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
+import dayjs from "dayjs";
 
 // Type Definitions
 interface AddSlotFormValues {
-  appointmentDay: number; // ✅ Fix: Use `number` instead of `int`
+  appointmentDate: string; // Change from number to string (YYYY-MM-DD)
   appointmentTime: string;
 }
 
@@ -30,10 +28,10 @@ interface AddSlotModalProps {
   handleCloseAddSlot: () => void;
 }
 
-const AddSlotModal: React.FC<AddSlotModalProps> = ({ slotopen, handleCloseAddSlot }) => {
-  // Days Enum (Matching Backend)
-  const days: string[] = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-
+const AddSlotModal: React.FC<AddSlotModalProps> = ({
+  slotopen,
+  handleCloseAddSlot,
+}) => {
   const queryClient = useQueryClient();
 
   // Mutation for API Call
@@ -45,7 +43,7 @@ const AddSlotModal: React.FC<AddSlotModalProps> = ({ slotopen, handleCloseAddSlo
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["slots"] });
       toast.success("Slot added successfully!");
-      handleCloseAddSlot()
+      handleCloseAddSlot();
     },
     onError: (err: any) => {
       toast.error(err || "Failed to add slot.");
@@ -55,13 +53,16 @@ const AddSlotModal: React.FC<AddSlotModalProps> = ({ slotopen, handleCloseAddSlo
   // Formik Setup
   const formik = useFormik<AddSlotFormValues>({
     initialValues: {
-      appointmentDay: 0, // ✅ Default to index 0 (Monday)
+      appointmentDate: dayjs().format("YYYY-MM-DD"), // Default to today's date
       appointmentTime: "",
     },
     validationSchema: Yup.object({
-      appointmentDay: Yup.number().required("Appointment day is required."), // ✅ Fix: Use number
+      appointmentDate: Yup.string().required("Appointment date is required."), // Ensure date is selected
       appointmentTime: Yup.string()
-        .matches(/^(0[1-9]|1[0-2]):[0-5][0-9] (AM|PM)$/, "Invalid time format. Use 'hh:mm AM/PM'")
+        .matches(
+          /^(0[1-9]|1[0-2]):[0-5][0-9] (AM|PM)$/,
+          "Invalid time format. Use 'hh:mm AM/PM'"
+        )
         .required("Appointment time is required."),
     }),
     onSubmit: async (values) => {
@@ -70,30 +71,43 @@ const AddSlotModal: React.FC<AddSlotModalProps> = ({ slotopen, handleCloseAddSlo
   });
 
   return (
-    <Dialog open={slotopen} onClose={handleCloseAddSlot} fullWidth maxWidth="sm">
+    <Dialog
+      open={slotopen}
+      onClose={handleCloseAddSlot}
+      fullWidth
+      maxWidth="sm"
+    >
       <DialogTitle>Add a New Slot</DialogTitle>
       <DialogContent>
         <Box component="form" onSubmit={formik.handleSubmit} sx={{ p: 2 }}>
-          {/* Select Appointment Day */}
-          <FormControl fullWidth sx={{ mb: 2 }} error={formik.touched.appointmentDay && Boolean(formik.errors.appointmentDay)}>
-            <InputLabel>Appointment Day</InputLabel>
-            <Select
-              name="appointmentDay"
-              value={formik.values.appointmentDay}
-              onChange={(event) => {
-                const selectedIndex = Number(event.target.value); // ✅ Ensure we pass the index
-                formik.setFieldValue("appointmentDay", selectedIndex);
+          {/* Date Picker for Appointment Date */}
+          <LocalizationProvider dateAdapter={AdapterDayjs}>
+            <DatePicker
+              label="Appointment Date"
+              value={dayjs(formik.values.appointmentDate)}
+              onChange={(date) => {
+                if (date) {
+                  formik.setFieldValue(
+                    "appointmentDate",
+                    date.format("YYYY-MM-DD")
+                  );
+                }
               }}
-              onBlur={formik.handleBlur}
-            >
-              {days.map((day, index) => (
-                <MenuItem key={day} value={index}>
-                  {day} {/* Display day name, but store index */}
-                </MenuItem>
-              ))}
-            </Select>
-            {formik.touched.appointmentDay && <FormHelperText>{formik.errors.appointmentDay}</FormHelperText>}
-          </FormControl>
+              disablePast // Prevent selecting past dates
+              slotProps={{
+                textField: {
+                  fullWidth: true,
+                  margin: "normal",
+                  error:
+                    formik.touched.appointmentDate &&
+                    Boolean(formik.errors.appointmentDate),
+                  helperText:
+                    formik.touched.appointmentDate &&
+                    formik.errors.appointmentDate,
+                },
+              }}
+            />
+          </LocalizationProvider>
 
           {/* Appointment Time Input */}
           <TextField
@@ -104,14 +118,25 @@ const AddSlotModal: React.FC<AddSlotModalProps> = ({ slotopen, handleCloseAddSlo
             value={formik.values.appointmentTime}
             onChange={formik.handleChange}
             onBlur={formik.handleBlur}
-            error={formik.touched.appointmentTime && Boolean(formik.errors.appointmentTime)}
-            helperText={formik.touched.appointmentTime && formik.errors.appointmentTime}
-            sx={{ mb: 2 }}
+            error={
+              formik.touched.appointmentTime &&
+              Boolean(formik.errors.appointmentTime)
+            }
+            helperText={
+              formik.touched.appointmentTime && formik.errors.appointmentTime
+            }
+            sx={{ mt: 2 }}
           />
 
           {/* Submit Button */}
-          <Button type="submit" variant="contained" sx={{ backgroundColor: "#000000" }} fullWidth disabled={slotAddMutation.isPending }>
-            {slotAddMutation.isPending  ? "Loading..." : "Add Slot"}
+          <Button
+            type="submit"
+            variant="contained"
+            sx={{ backgroundColor: "#000000", mt: 2 }}
+            fullWidth
+            disabled={slotAddMutation.isPending}
+          >
+            {slotAddMutation.isPending ? "Loading..." : "Add Slot"}
           </Button>
         </Box>
       </DialogContent>
