@@ -17,6 +17,9 @@ import Notification from "./pages/Notification";
 import Appointments from "./pages/Appointments";
 import AppoinmentById from "./pages/AppoinmentById";
 import VideoCall from "./pages/VideoCall";
+import Help from "./pages/Help";
+import DrDashBoard from "./pages/DrDashBoard";
+
 
 function App() {
   const location = useLocation();
@@ -35,6 +38,8 @@ function App() {
         <Route path="/appointments/:apid" element={<AppoinmentById/>}/>
         <Route path="/video-call/:vId" element={<VideoCall/>} /> 
         <Route path="*" element={<NotFoundPage />} />
+        <Route path="/help" element={<Help/>}/>
+        <Route path="/dashboard" element={<DrDashBoard/>}/>
 
         <Route path="/auth">
           <Route path="register" element={<Register />} />

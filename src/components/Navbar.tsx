@@ -232,7 +232,7 @@ const AuthSection = ({ name, navigate, doctor, unreadCount }: any) =>
 /** Navigation Menu Items */
 const menuItems = [
   { title: "Home", path: "/" },
-  { title: "Consult", path: "/consult" },
+  { title: "Dashboard", path: "/dashboard" },
   { title: "Appointments", path: "/appointments" },
   { title: "Help", path: "/help" },
 ];

@@ -23,7 +23,6 @@ const createAxiosInstance = (baseURL:any) => {
     refreshSubscribers = []; // Reset the array after executing callbacks
   };
   
-
   instance.interceptors.response.use(
     (response) => response,
     async (error) => {
